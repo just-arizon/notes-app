@@ -1,20 +1,20 @@
 import { useState, useEffect } from 'react';
 import Note from './components/Note'
 import axios from 'axios'
-import { response } from 'express';
+import noteService from './services/notes'
+import Notification from './components/Notifications'
 
 const App = () => {
   const [notes, setNotes] = useState([]);
   const [newNote, setNewNote] = useState('a new note...');
   const [showAll, setShowAll] = useState(true);
+  const [errorMessage, setErrorMessage] = useState(null)
 
   const hook = () => {
-    console.log('effect')
-    axios
-      .get('http://localhost:3001/notes')
-      .then(response => {
-        console.log('promise fulfilled')
-        setNotes(response.data)
+      noteService
+      .getAll()
+      .then(initialNotes => {
+        setNotes(initialNotes)
       })
   }
   
@@ -28,12 +28,12 @@ const App = () => {
       id: String(notes.length + 1)
     }
 
-    axios
-    .post('http://localhost:3001/notes', noteObject)
-    .then(response => {
-      console.log(response)
+    noteService
+    .create(noteObject)
+    .then(returnedNote => {
+      console.log(returnedNote)
        
-    setNotes(notes.concat(response.data))
+    setNotes(notes.concat(returnedNote))
     setNewNote('')
     })
  
@@ -56,15 +56,28 @@ const toggleImportanceOf = (id) => {
   // console.log(`importance of   ${id}  needs to be toggled`);
   // console.log(note);
   
-  axios.put(url, changedNote)
-  .then(response => {
-    setNotes(notes.map(n => n.id === id ? response.data : n))
+  noteService
+  .update(url, changedNote)
+  .then(returnedNote => {
+    setNotes(notes.map(n => n.id === id ? returnedNote : n))
+  })
+  .catch(error => {
+    setErrorMessage(
+      `the note '${note.content}' was already deleted from server`
+    )
+    setNotes(notes.filter(n => n.id !== id))
+
+    setTimeout(() => {
+      setErrorMessage(null)
+    }, 5000)
+
   })
 } 
 
   return (
     <div>
       <h1>Notes</h1>
+      <Notification message={errorMessage} />
       <div>
         <button onClick={() => setShowAll(!showAll)}>
           show {showAll ? 'important' : 'all'}
